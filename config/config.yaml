@@ -14,7 +14,7 @@ model:
 
 training:
   batch_size: 128
-  maximum_epochs: 30
+  maximum_epochs: 20
   learning_rate: 0.001
   early_stopping_patience: 5
   reduce_lr_patience: 2
