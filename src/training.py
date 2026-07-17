@@ -171,9 +171,6 @@ def main():
     seed = config["seed"]
     batch_size = config["training"]["batch_size"]
     maximum_epochs = config["training"]["maximum_epochs"]
-    learning_rate = config["training"]["learning_rate"]
-    early_stopping_patience = config["training"]["early_stopping_patience"]
-    reduce_lr_patience = config["training"]["reduce_lr_patience"]
 
     set_seed(seed)
     create_directories()
@@ -184,7 +181,7 @@ def main():
         x_train_clean,
         x_train_noisy,
         x_validation_clean,
-        x_validation_noisy,
+        x_validation_noisy
     ) = load_training_data()
 
     print("Training pulito:", x_train_clean.shape)
@@ -201,10 +198,7 @@ def main():
 
     compile_model(model=model)
 
-    callbacks, best_model_path = create_callbacks(
-        early_stopping_patience=early_stopping_patience,
-        reduce_lr_patience=reduce_lr_patience,
-    )
+    callbacks, best_model_path = create_callbacks()
 
     print("\nInizio del training...")
 
@@ -223,9 +217,7 @@ def main():
 
     history_path = save_history(history)
 
-    history_figure_path = save_training_history_figure(
-        history_path=history_path,
-    )
+    history_figure_path = save_training_history_figure(history_path)
 
     best_epoch, best_validation_loss = summarize_training(history)
 
