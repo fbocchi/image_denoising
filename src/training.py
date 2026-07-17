@@ -51,10 +51,8 @@ def load_training_data():
     )
 
 
-def compile_model(model, learning_rate):
-    optimizer = keras.optimizers.Adam(
-        learning_rate=learning_rate,
-    )
+def compile_model(model):
+    optimizer = keras.optimizers.Adam()
 
     model.compile(
         optimizer=optimizer,
@@ -74,21 +72,6 @@ def create_callbacks(
             monitor="val_loss",
             mode="min",
             save_best_only=True,
-            verbose=1,
-        ),
-        keras.callbacks.EarlyStopping(
-            monitor="val_loss",
-            mode="min",
-            patience=early_stopping_patience,
-            restore_best_weights=True,
-            verbose=1,
-        ),
-        keras.callbacks.ReduceLROnPlateau(
-            monitor="val_loss",
-            mode="min",
-            factor=0.5,
-            patience=reduce_lr_patience,
-            min_lr=1e-6,
             verbose=1,
         ),
     ]
@@ -216,10 +199,7 @@ def main():
 
     model.summary()
 
-    compile_model(
-        model=model,
-        learning_rate=learning_rate,
-    )
+    compile_model(model=model)
 
     callbacks, best_model_path = create_callbacks(
         early_stopping_patience=early_stopping_patience,
@@ -247,17 +227,11 @@ def main():
         history_path=history_path,
     )
 
-    (
-        best_epoch,
-        best_validation_loss,
-    ) = summarize_training(history)
+    best_epoch, best_validation_loss = summarize_training(history)
 
     print("\nTraining completato.")
     print(f"Epoca migliore: {best_epoch}")
-    print(
-        f"Validation loss migliore: "
-        f"{best_validation_loss:.6f}"
-    )
+    print(f"Validation loss migliore: {best_validation_loss:.6f}")
 
     print("\nModello migliore salvato in:")
     print(best_model_path)

@@ -9,12 +9,9 @@ noise:
 
 model:
   first_filters: 32
-  second_filters: 64
+  second_filters: 32
   kernel_size: 3
 
 training:
   batch_size: 128
   maximum_epochs: 20
-  learning_rate: 0.001
-  early_stopping_patience: 5
-  reduce_lr_patience: 2
