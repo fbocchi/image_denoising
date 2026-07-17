@@ -178,7 +178,7 @@ def main():
         x_train_clean,
         x_train_noisy,
         x_validation_clean,
-        x_validation_noisy,
+        x_validation_noisy
     ) = load_training_data()
 
     print("Training pulito:", x_train_clean.shape)
@@ -214,9 +214,7 @@ def main():
 
     history_path = save_history(history)
 
-    history_figure_path = save_training_history_figure(
-        history_path=history_path,
-    )
+    history_figure_path = save_training_history_figure(history_path)
 
     best_epoch, best_validation_loss = summarize_training(history)
 
