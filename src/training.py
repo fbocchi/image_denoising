@@ -1,16 +1,20 @@
+import json
 import random
 
-import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
 from tensorflow import keras
 
 from src.config import load_config
+from src.model import build_autoencoder
 from src.paths import (
     FIGURE_DIR,
+    METRICS_DIR,
+    MODEL_DIR,
     PROCESSED_DATA_DIR,
     create_directories,
 )
+from src.visualization import plot_training_history
 
 
 def set_seed(seed):
@@ -19,135 +23,162 @@ def set_seed(seed):
     tf.random.set_seed(seed)
 
 
-def normalize_images(images):
-    images = images.astype("float32")
-    images /= 255.0
+def load_array(filename):
+    file_path = PROCESSED_DATA_DIR / filename
 
-    return np.expand_dims(images, axis=-1)
+    if not file_path.exists():
+        raise FileNotFoundError(
+            f"File non trovato: {file_path}\n"
+            "Eseguire prima:\n"
+            "python -m src.preprocessing"
+        )
+
+    return np.load(file_path)
 
 
-def add_gaussian_noise(images, standard_deviation, seed):
-    random_generator = np.random.default_rng(seed)
+def load_training_data():
+    x_train_clean = load_array("x_train_clean.npy")
+    x_train_noisy = load_array("x_train_noisy.npy")
 
-    noise = random_generator.normal(
-        loc=0.0,
-        scale=standard_deviation,
-        size=images.shape,
+    x_validation_clean = load_array("x_validation_clean.npy")
+    x_validation_noisy = load_array("x_validation_noisy.npy")
+
+    return (
+        x_train_clean,
+        x_train_noisy,
+        x_validation_clean,
+        x_validation_noisy,
     )
 
-    noisy_images = images + noise
-    noisy_images = np.clip(noisy_images, 0.0, 1.0)
 
-    return noisy_images.astype("float32")
+def compile_model(model, learning_rate):
+    optimizer = keras.optimizers.Adam(
+        learning_rate=learning_rate,
+    )
 
-
-def load_dataset():
-    return keras.datasets.fashion_mnist.load_data()
-
-
-def split_dataset(x_train_full, validation_size):
-    split_index = len(x_train_full) - validation_size
-
-    x_train = x_train_full[:split_index]
-    x_validation = x_train_full[split_index:]
-
-    return x_train, x_validation
+    model.compile(
+        optimizer=optimizer,
+        loss=keras.losses.MeanSquaredError(),
+    )
 
 
-def save_array(filename, array):
-    output_path = PROCESSED_DATA_DIR / filename
-
-    np.save(output_path, array)
-
-    return output_path
-
-
-def save_dataset(datasets):
-    saved_files = []
-
-    for filename, array in datasets.items():
-        saved_files.append(save_array(filename, array))
-
-    return saved_files
-
-
-def save_noise_examples(
-    clean_images,
-    noisy_images,
-    number_of_images=10,
+def create_callbacks(
+    early_stopping_patience,
+    reduce_lr_patience,
 ):
-    figure = plt.figure(figsize=(15, 4))
+    best_model_path = MODEL_DIR / "best_model.keras"
 
-    for index in range(number_of_images):
-        axis = plt.subplot(2, number_of_images, index + 1)
+    callbacks = [
+        keras.callbacks.ModelCheckpoint(
+            filepath=best_model_path,
+            monitor="val_loss",
+            mode="min",
+            save_best_only=True,
+            verbose=1,
+        ),
+        keras.callbacks.EarlyStopping(
+            monitor="val_loss",
+            mode="min",
+            patience=early_stopping_patience,
+            restore_best_weights=True,
+            verbose=1,
+        ),
+        keras.callbacks.ReduceLROnPlateau(
+            monitor="val_loss",
+            mode="min",
+            factor=0.5,
+            patience=reduce_lr_patience,
+            min_lr=1e-6,
+            verbose=1,
+        ),
+    ]
 
-        plt.imshow(
-            clean_images[index].squeeze(),
-            cmap="gray",
-            vmin=0.0,
-            vmax=1.0,
-        )
-
-        plt.axis("off")
-
-        if index == 0:
-            axis.set_ylabel("Pulita")
-
-        axis = plt.subplot(
-            2,
-            number_of_images,
-            index + 1 + number_of_images,
-        )
-
-        plt.imshow(
-            noisy_images[index].squeeze(),
-            cmap="gray",
-            vmin=0.0,
-            vmax=1.0,
-        )
-
-        plt.axis("off")
-
-        if index == 0:
-            axis.set_ylabel("Rumorosa")
-
-    plt.tight_layout()
-
-    output_path = FIGURE_DIR / "noise_examples.png"
-
-    figure.savefig(
-        output_path,
-        dpi=200,
-        bbox_inches="tight",
-    )
-
-    plt.close(figure)
-
-    return output_path
+    return callbacks, best_model_path
 
 
-def print_dataset_statistics(
-    x_train_full,
-    x_test,
-    x_train,
-    x_validation,
+def train_model(
+    model,
+    x_train_clean,
     x_train_noisy,
+    x_validation_clean,
+    x_validation_noisy,
+    maximum_epochs,
+    batch_size,
+    callbacks,
 ):
-    print("\nDimensioni originali:")
-    print("Training completo:", x_train_full.shape)
-    print("Test:", x_test.shape)
+    return model.fit(
+        x=x_train_noisy,
+        y=x_train_clean,
+        validation_data=(
+            x_validation_noisy,
+            x_validation_clean,
+        ),
+        epochs=maximum_epochs,
+        batch_size=batch_size,
+        shuffle=True,
+        callbacks=callbacks,
+        verbose=1,
+    )
 
-    print("\nDimensioni finali:")
-    print("Training:", x_train.shape)
-    print("Validation:", x_validation.shape)
-    print("Test:", x_test.shape)
 
-    print("\nIntervalli:")
-    print("Training pulito:", x_train.min(), x_train.max())
-    print(
-        "Training rumoroso:",
-        x_train_noisy.min(),
-        x_train_noisy.max(),
+def save_model(model):
+    output_path = MODEL_DIR / "final_model.keras"
+
+    model.save(output_path)
+
+    return output_path
+
+
+def convert_history_to_json(history):
+    converted_history = {}
+
+    for metric_name, values in history.history.items():
+        converted_history[metric_name] = [
+            float(value)
+            for value in values
+        ]
+
+    return converted_history
+
+
+def save_history(history):
+    history_dictionary = convert_history_to_json(history)
+
+    output_path = METRICS_DIR / "training_history.json"
+
+    with open(output_path, "w", encoding="utf-8") as file:
+        json.dump(
+            history_dictionary,
+            file,
+            indent=4,
+        )
+
+    return output_path
+
+
+def save_training_history_figure(history_path):
+    output_path = FIGURE_DIR / "training_history.png"
+
+    plot_training_history(
+        history_path=history_path,
+        output_path=output_path,
+    )
+
+    return output_path
+
+
+def summarize_training(history):
+    best_epoch = (
+        np.argmin(history.history["val_loss"]) + 1
+    )
+
+    best_validation_loss = np.min(
+        history.history["val_loss"]
+    )
+
+    return (
+        best_epoch,
+        best_validation_loss,
     )
 
 
@@ -155,76 +186,90 @@ def main():
     config = load_config()
 
     seed = config["seed"]
-    validation_size = config["data"]["validation_size"]
-    noise_standard_deviation = config["noise"]["standard_deviation"]
+    batch_size = config["training"]["batch_size"]
+    maximum_epochs = config["training"]["maximum_epochs"]
+    learning_rate = config["training"]["learning_rate"]
+    early_stopping_patience = config["training"]["early_stopping_patience"]
+    reduce_lr_patience = config["training"]["reduce_lr_patience"]
 
     set_seed(seed)
     create_directories()
 
-    print("\nCaricamento del dataset...")
+    print("\nCaricamento dei dati...")
 
-    (x_train_full, _), (x_test, _) = load_dataset()
+    (
+        x_train_clean,
+        x_train_noisy,
+        x_validation_clean,
+        x_validation_noisy,
+    ) = load_training_data()
 
-    x_train_full = normalize_images(x_train_full)
-    x_test = normalize_images(x_test)
+    print("Training pulito:", x_train_clean.shape)
+    print("Training rumoroso:", x_train_noisy.shape)
 
-    x_train, x_validation = split_dataset(
-        x_train_full,
-        validation_size,
+    print("Validation pulito:", x_validation_clean.shape)
+    print("Validation rumoroso:", x_validation_noisy.shape)
+
+    print("\nCostruzione del modello...")
+
+    model = build_autoencoder(config)
+
+    model.summary()
+
+    compile_model(
+        model=model,
+        learning_rate=learning_rate,
     )
 
-    x_train_noisy = add_gaussian_noise(
-        images=x_train,
-        standard_deviation=noise_standard_deviation,
-        seed=seed,
+    callbacks, best_model_path = create_callbacks(
+        early_stopping_patience=early_stopping_patience,
+        reduce_lr_patience=reduce_lr_patience,
     )
 
-    x_validation_noisy = add_gaussian_noise(
-        images=x_validation,
-        standard_deviation=noise_standard_deviation,
-        seed=seed + 1,
-    )
+    print("\nInizio del training...")
 
-    x_test_noisy = add_gaussian_noise(
-        images=x_test,
-        standard_deviation=noise_standard_deviation,
-        seed=seed + 2,
-    )
-
-    print_dataset_statistics(
-        x_train_full=x_train_full,
-        x_test=x_test,
-        x_train=x_train,
-        x_validation=x_validation,
+    history = train_model(
+        model=model,
+        x_train_clean=x_train_clean,
         x_train_noisy=x_train_noisy,
+        x_validation_clean=x_validation_clean,
+        x_validation_noisy=x_validation_noisy,
+        maximum_epochs=maximum_epochs,
+        batch_size=batch_size,
+        callbacks=callbacks,
     )
 
-    print("\nSalvataggio degli array...")
+    final_model_path = save_model(model)
 
-    saved_files = save_dataset(
-        {
-            "x_train_clean.npy": x_train,
-            "x_train_noisy.npy": x_train_noisy,
-            "x_validation_clean.npy": x_validation,
-            "x_validation_noisy.npy": x_validation_noisy,
-            "x_test_clean.npy": x_test,
-            "x_test_noisy.npy": x_test_noisy,
-        }
+    history_path = save_history(history)
+
+    history_figure_path = save_training_history_figure(
+        history_path=history_path,
     )
 
-    for path in saved_files:
-        print(path)
+    (
+        best_epoch,
+        best_validation_loss,
+    ) = summarize_training(history)
 
-    print("\nGenerazione della figura...")
-
-    figure_path = save_noise_examples(
-        clean_images=x_train,
-        noisy_images=x_train_noisy,
+    print("\nTraining completato.")
+    print(f"Epoca migliore: {best_epoch}")
+    print(
+        f"Validation loss migliore: "
+        f"{best_validation_loss:.6f}"
     )
 
-    print(figure_path)
+    print("\nModello migliore salvato in:")
+    print(best_model_path)
 
-    print("\nPreprocessing completato.")
+    print("\nModello finale salvato in:")
+    print(final_model_path)
+
+    print("\nStorico salvato in:")
+    print(history_path)
+
+    print("\nGrafico del training salvato in:")
+    print(history_figure_path)
 
 
 if __name__ == "__main__":
