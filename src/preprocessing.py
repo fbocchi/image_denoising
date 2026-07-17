@@ -46,10 +46,8 @@ def load_dataset():
 
 def split_dataset(x_train_full, validation_size):
     split_index = len(x_train_full) - validation_size
-
     x_train = x_train_full[:split_index]
     x_validation = x_train_full[split_index:]
-
     return x_train, x_validation
 
 
