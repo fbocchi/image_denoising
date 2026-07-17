@@ -55,9 +55,7 @@ def split_dataset(x_train_full, validation_size):
 
 def save_array(filename, array):
     output_path = PROCESSED_DATA_DIR / filename
-
     np.save(output_path, array)
-
     return output_path
 
 
