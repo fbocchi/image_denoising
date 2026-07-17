@@ -60,10 +60,7 @@ def compile_model(model):
     )
 
 
-def create_callbacks(
-    early_stopping_patience,
-    reduce_lr_patience,
-):
+def create_callbacks():
     best_model_path = MODEL_DIR / "best_model.keras"
 
     callbacks = [
