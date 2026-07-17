@@ -3,16 +3,12 @@ from tensorflow import keras
 
 from src.paths import (
     FIGURE_DIR,
-    METRICS_DIR,
     MODEL_DIR,
     PREDICTION_DIR,
     PROCESSED_DATA_DIR,
     create_directories,
 )
-from src.visualization import (
-    plot_reconstructions,
-    plot_training_history,
-)
+from src.visualization import plot_reconstructions
 
 
 def load_array(filename):
@@ -51,9 +47,7 @@ def reconstruct_images(model, x_test_noisy):
 
 def save_reconstructions(reconstructed_images):
     output_path = PREDICTION_DIR / "reconstructed_test.npy"
-
     np.save(output_path, reconstructed_images)
-
     return output_path
 
 
