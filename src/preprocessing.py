@@ -22,7 +22,6 @@ def set_seed(seed):
 def normalize_images(images):
     images = images.astype("float32")
     images /= 255.0
-
     return np.expand_dims(images, axis=-1)
 
 

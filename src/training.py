@@ -60,10 +60,7 @@ def compile_model(model):
     )
 
 
-def create_callbacks(
-    early_stopping_patience,
-    reduce_lr_patience,
-):
+def create_callbacks():
     best_model_path = MODEL_DIR / "best_model.keras"
 
     callbacks = [
@@ -171,9 +168,6 @@ def main():
     seed = config["seed"]
     batch_size = config["training"]["batch_size"]
     maximum_epochs = config["training"]["maximum_epochs"]
-    learning_rate = config["training"]["learning_rate"]
-    early_stopping_patience = config["training"]["early_stopping_patience"]
-    reduce_lr_patience = config["training"]["reduce_lr_patience"]
 
     set_seed(seed)
     create_directories()
@@ -201,10 +195,7 @@ def main():
 
     compile_model(model=model)
 
-    callbacks, best_model_path = create_callbacks(
-        early_stopping_patience=early_stopping_patience,
-        reduce_lr_patience=reduce_lr_patience,
-    )
+    callbacks, best_model_path = create_callbacks()
 
     print("\nInizio del training...")
 
