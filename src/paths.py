@@ -12,7 +12,6 @@ PREDICTION_DIR = OUTPUT_DIR / "predictions"
 
 
 def create_directories():
-
     directories = [
         PROCESSED_DATA_DIR,
         MODEL_DIR,
@@ -22,5 +21,4 @@ def create_directories():
     ]
 
     for directory in directories:
-
         directory.mkdir(parents=True, exist_ok=True)

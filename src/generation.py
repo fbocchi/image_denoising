@@ -1,5 +1,4 @@
 import numpy as np
-
 from tensorflow import keras
 
 from src.paths import (
@@ -10,15 +9,16 @@ from src.paths import (
     PROCESSED_DATA_DIR,
     create_directories,
 )
+from src.visualization import (
+    plot_reconstructions,
+    plot_training_history,
+)
 
-from src.visualization import plot_reconstructions, plot_training_history
 
 def load_array(filename):
-
     file_path = PROCESSED_DATA_DIR / filename
 
     if not file_path.exists():
-
         raise FileNotFoundError(
             f"File non trovato: {file_path}\n"
             "Eseguire prima:\n"
@@ -28,75 +28,107 @@ def load_array(filename):
     return np.load(file_path)
 
 
-def main():
-
-    create_directories()
-
-    print("\nCaricamento delle immagini...")
-
-    x_test_clean = load_array("x_test_clean.npy")
-
-    x_test_noisy = load_array("x_test_noisy.npy")
-
+def load_model():
     model_path = MODEL_DIR / "best_model.keras"
 
     if not model_path.exists():
-
         raise FileNotFoundError(
             f"Modello non trovato: {model_path}\n"
             "Eseguire prima:\n"
             "python -m src.training"
         )
 
-    print("\nCaricamento del modello:")
+    return keras.models.load_model(model_path), model_path
 
 
-    print(model_path)
+def reconstruct_images(model, x_test_noisy):
+    return model.predict(
+        x=x_test_noisy,
+        batch_size=128,
+        verbose=1,
+    )
 
 
-    model = keras.models.load_model(model_path)
+def save_reconstructions(reconstructed_images):
+    output_path = PREDICTION_DIR / "reconstructed_test.npy"
 
-    print("\nGenerazione delle ricostruzioni...")
+    np.save(output_path, reconstructed_images)
 
-    reconstructed_images = model.predict(x=x_test_noisy, batch_size=128, verbose=1)
+    return output_path
 
-    predictions_path = PREDICTION_DIR / "reconstructed_test.npy"
 
-    np.save(predictions_path, reconstructed_images)
-
-    print("\nRicostruzioni salvate in:")
-
-    print(predictions_path)
-
-    reconstruction_figure_path = FIGURE_DIR / "reconstructions.png"
+def save_reconstruction_figure(
+    x_test_clean,
+    x_test_noisy,
+    reconstructed_images,
+):
+    output_path = FIGURE_DIR / "reconstructions.png"
 
     plot_reconstructions(
         clean_images=x_test_clean,
         noisy_images=x_test_noisy,
         reconstructed_images=reconstructed_images,
-        output_path=reconstruction_figure_path,
+        output_path=output_path,
         number_of_images=10,
     )
 
-    print("\nFigura delle ricostruzioni salvata in:")
+    return output_path
 
-    print(reconstruction_figure_path)
 
+def save_training_history_figure():
     history_path = METRICS_DIR / "training_history.json"
 
-    if history_path.exists():
+    if not history_path.exists():
+        return None
 
-        training_figure_path = FIGURE_DIR / "training_history.png"
+    output_path = FIGURE_DIR / "training_history.png"
 
-        plot_training_history(history_path=history_path, output_path=training_figure_path)
+    plot_training_history(
+        history_path=history_path,
+        output_path=output_path,
+    )
 
-        print("\nGrafico del training salvato in:")
+    return output_path
 
-        print(training_figure_path)
 
-    else:
+def main():
+    create_directories()
 
+    print("\nCaricamento delle immagini...")
+    x_test_clean = load_array("x_test_clean.npy")
+    x_test_noisy = load_array("x_test_noisy.npy")
+
+    print("\nCaricamento del modello...")
+    model, model_path = load_model()
+    print(model_path)
+
+    print("\nGenerazione delle ricostruzioni...")
+    reconstructed_images = reconstruct_images(
+        model=model,
+        x_test_noisy=x_test_noisy,
+    )
+
+    predictions_path = save_reconstructions(reconstructed_images)
+
+    print("\nRicostruzioni salvate in:")
+    print(predictions_path)
+
+    reconstruction_figure_path = save_reconstruction_figure(
+        x_test_clean=x_test_clean,
+        x_test_noisy=x_test_noisy,
+        reconstructed_images=reconstructed_images,
+    )
+
+    print("\nFigura delle ricostruzioni salvata in:")
+    print(reconstruction_figure_path)
+
+    training_figure_path = save_training_history_figure()
+
+    if training_figure_path is None:
         print("\nStorico del training non trovato.")
+    else:
+        print("\nGrafico del training salvato in:")
+        print(training_figure_path)
 
     print("\nGenerazione completata.")
 

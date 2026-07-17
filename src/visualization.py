@@ -3,23 +3,28 @@ import json
 import matplotlib.pyplot as plt
 
 
-def plot_training_history(history_path, output_path):
-
-    # ========================================================
-    # LETTURA DELLO STORICO
-    # ========================================================
-
+def load_history(history_path):
     with open(history_path, "r", encoding="utf-8") as file:
-        history = json.load(file)
+        return json.load(file)
+
+
+def save_figure(figure, output_path):
+    figure.savefig(
+        output_path,
+        dpi=200,
+        bbox_inches="tight",
+    )
+
+    plt.close(figure)
+
+
+def plot_training_history(history_path, output_path):
+    history = load_history(history_path)
 
     training_loss = history["loss"]
     validation_loss = history["val_loss"]
 
     epochs = range(1, len(training_loss) + 1)
-
-    # ========================================================
-    # CREAZIONE DEL GRAFICO
-    # ========================================================
 
     figure = plt.figure(figsize=(9, 5))
 
@@ -43,17 +48,10 @@ def plot_training_history(history_path, output_path):
     plt.grid()
     plt.tight_layout()
 
-    # ========================================================
-    # SALVATAGGIO
-    # ========================================================
-
-    figure.savefig(
-        output_path,
-        dpi=200,
-        bbox_inches="tight",
+    save_figure(
+        figure=figure,
+        output_path=output_path,
     )
-
-    plt.close(figure)
 
 
 def plot_reconstructions(
@@ -66,11 +64,6 @@ def plot_reconstructions(
     figure = plt.figure(figsize=(16, 6))
 
     for index in range(number_of_images):
-
-        # ====================================================
-        # IMMAGINE PULITA
-        # ====================================================
-
         axis = plt.subplot(
             3,
             number_of_images,
@@ -89,10 +82,6 @@ def plot_reconstructions(
         if index == 0:
             axis.set_ylabel("Pulita")
 
-        # ====================================================
-        # IMMAGINE RUMOROSA
-        # ====================================================
-
         axis = plt.subplot(
             3,
             number_of_images,
@@ -110,10 +99,6 @@ def plot_reconstructions(
 
         if index == 0:
             axis.set_ylabel("Rumorosa")
-
-        # ====================================================
-        # IMMAGINE RICOSTRUITA
-        # ====================================================
 
         axis = plt.subplot(
             3,
@@ -135,14 +120,7 @@ def plot_reconstructions(
 
     plt.tight_layout()
 
-    # ========================================================
-    # SALVATAGGIO
-    # ========================================================
-
-    figure.savefig(
-        output_path,
-        dpi=200,
-        bbox_inches="tight",
+    save_figure(
+        figure=figure,
+        output_path=output_path,
     )
-
-    plt.close(figure)
