@@ -75,22 +75,6 @@ def save_reconstruction_figure(
     return output_path
 
 
-def save_training_history_figure():
-    history_path = METRICS_DIR / "training_history.json"
-
-    if not history_path.exists():
-        return None
-
-    output_path = FIGURE_DIR / "training_history.png"
-
-    plot_training_history(
-        history_path=history_path,
-        output_path=output_path,
-    )
-
-    return output_path
-
-
 def main():
     create_directories()
 
@@ -121,14 +105,6 @@ def main():
 
     print("\nFigura delle ricostruzioni salvata in:")
     print(reconstruction_figure_path)
-
-    training_figure_path = save_training_history_figure()
-
-    if training_figure_path is None:
-        print("\nStorico del training non trovato.")
-    else:
-        print("\nGrafico del training salvato in:")
-        print(training_figure_path)
 
     print("\nGenerazione completata.")
 
