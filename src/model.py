@@ -2,71 +2,20 @@ from tensorflow import keras
 from tensorflow.keras import layers
 
 
-def build_autoencoder(config):
-    """
-    Costruisce un convolutional denoising autoencoder.
-
-    Encoder:
-        28 x 28 x 1
-        -> 28 x 28 x 32
-        -> 14 x 14 x 32
-        -> 14 x 14 x 64
-        -> 7 x 7 x 64
-
-    Decoder:
-        7 x 7 x 64
-        -> 14 x 14 x 64
-        -> 28 x 28 x 32
-        -> 28 x 28 x 1
-
-    Parameters
-    ----------
-    config : dict
-        Configurazione caricata da config.yaml.
-
-    Returns
-    -------
-    keras.Model
-        Il convolutional denoising autoencoder.
-    """
-
-    # ========================================================
-    # PARAMETRI DEL MODELLO
-    # ========================================================
+def build_encoder(config):
 
     first_filters = config["model"]["first_filters"]
-
     second_filters = config["model"]["second_filters"]
-
     kernel_size = config["model"]["kernel_size"]
-
-
-    # ========================================================
-    # INPUT
-    # ========================================================
-
-    # Immagine Fashion-MNIST rumorosa:
-    #
-    # 28 x 28 pixel
-    # 1 canale, perché è in scala di grigi.
 
     inputs = keras.Input(
         shape=(28, 28, 1),
-        name="noisy_image",
+        name="encoder_input",
     )
 
-
-    # ========================================================
-    # ENCODER
-    # ========================================================
-
-    # Input:
-    #
     # 28 x 28 x 1
-    #
-    # Output:
-    #
-    # 28 x 28 x 32
+    # ->
+    # 28 x 28 x first_filters
 
     x = layers.Conv2D(
         filters=first_filters,
@@ -76,14 +25,9 @@ def build_autoencoder(config):
         name="encoder_conv_1",
     )(inputs)
 
-
-    # Riduzione della risoluzione:
-    #
-    # 28 x 28 x 32
-    #
+    # 28 x 28 x first_filters
     # ->
-    #
-    # 14 x 14 x 32
+    # 14 x 14 x first_filters
 
     x = layers.MaxPooling2D(
         pool_size=(2, 2),
@@ -91,14 +35,9 @@ def build_autoencoder(config):
         name="encoder_pool_1",
     )(x)
 
-
-    # Estrazione di feature più complesse:
-    #
-    # 14 x 14 x 32
-    #
+    # 14 x 14 x first_filters
     # ->
-    #
-    # 14 x 14 x 64
+    # 14 x 14 x second_filters
 
     x = layers.Conv2D(
         filters=second_filters,
@@ -108,33 +47,36 @@ def build_autoencoder(config):
         name="encoder_conv_2",
     )(x)
 
-
-    # Seconda riduzione della risoluzione:
-    #
-    # 14 x 14 x 64
-    #
+    # 14 x 14 x second_filters
     # ->
-    #
-    # 7 x 7 x 64
+    # 7 x 7 x second_filters
 
-    latent_representation = layers.MaxPooling2D(
+    latent = layers.MaxPooling2D(
         pool_size=(2, 2),
         padding="same",
         name="latent_representation",
     )(x)
 
+    return keras.Model(
+        inputs=inputs,
+        outputs=latent,
+        name="encoder",
+    )
 
-    # ========================================================
-    # DECODER
-    # ========================================================
+def build_decoder(config):
 
-    # Aumento della risoluzione:
-    #
-    # 7 x 7 x 64
-    #
+    first_filters = config["model"]["first_filters"]
+    second_filters = config["model"]["second_filters"]
+    kernel_size = config["model"]["kernel_size"]
+
+    latent_inputs = keras.Input(
+        shape=(7, 7, second_filters),
+        name="latent_input",
+    )
+
+    # 7 x 7 x second_filters
     # ->
-    #
-    # 14 x 14 x 64
+    # 14 x 14 x second_filters
 
     x = layers.Conv2DTranspose(
         filters=second_filters,
@@ -143,16 +85,11 @@ def build_autoencoder(config):
         padding="same",
         activation="relu",
         name="decoder_transposed_conv_1",
-    )(latent_representation)
+    )(latent_inputs)
 
-
-    # Secondo aumento della risoluzione:
-    #
-    # 14 x 14 x 64
-    #
+    # 14 x 14 x second_filters
     # ->
-    #
-    # 28 x 28 x 32
+    # 28 x 28 x first_filters
 
     x = layers.Conv2DTranspose(
         filters=first_filters,
@@ -163,22 +100,9 @@ def build_autoencoder(config):
         name="decoder_transposed_conv_2",
     )(x)
 
-
-    # ========================================================
-    # OUTPUT
-    # ========================================================
-
-    # Ricostruzione dell'immagine pulita:
-    #
-    # 28 x 28 x 32
-    #
+    # 28 x 28 x first_filters
     # ->
-    #
     # 28 x 28 x 1
-    #
-    # L'attivazione sigmoid produce valori
-    # nell'intervallo [0, 1], come le immagini
-    # normalizzate.
 
     outputs = layers.Conv2D(
         filters=1,
@@ -188,22 +112,34 @@ def build_autoencoder(config):
         name="reconstructed_image",
     )(x)
 
+    return keras.Model(
+        inputs=latent_inputs,
+        outputs=outputs,
+        name="decoder",
+    )
 
-    # ========================================================
-    # MODELLO COMPLETO
-    # ========================================================
+def build_autoencoder(config):
 
-    model = keras.Model(
+    encoder = build_encoder(config)
+    decoder = build_decoder(config)
+
+    inputs = keras.Input(
+        shape=(28, 28, 1),
+        name="noisy_image",
+    )
+
+    latent = encoder(inputs)
+
+    outputs = decoder(latent)
+
+    return keras.Model(
         inputs=inputs,
         outputs=outputs,
         name="convolutional_denoising_autoencoder",
     )
 
 
-    return model
-
 if __name__ == "__main__":
-
     from src.config import load_config
 
     config = load_config()
