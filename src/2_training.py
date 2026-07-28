@@ -14,7 +14,7 @@ from src.paths import (
     PROCESSED_DATA_DIR,
     create_directories,
 )
-from src.visualization import plot_training_history
+from src.visualization import plot_training_history_2
 
 
 def set_seed(seed):
@@ -139,7 +139,7 @@ def save_history(history):
 def save_training_history_figure(history_path):
     output_path = FIGURE_DIR / "training_history.png"
 
-    plot_training_history(
+    plot_training_history_2(
         history_path=history_path,
         output_path=output_path,
     )

@@ -10,7 +10,7 @@ def build_encoder(config):
 
     inputs = keras.Input(
         shape=(28, 28, 1),
-        name="encoder_input",
+        name="noisy_image",
     )
 
     # 28 x 28 x 1
@@ -71,7 +71,7 @@ def build_decoder(config):
 
     latent_inputs = keras.Input(
         shape=(7, 7, second_filters),
-        name="latent_input",
+        name="latent_representation",
     )
 
     # 7 x 7 x second_filters
@@ -147,3 +147,5 @@ if __name__ == "__main__":
     model = build_autoencoder(config)
 
     model.summary()
+
+

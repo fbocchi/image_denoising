@@ -49,7 +49,7 @@ desktop.ini
 # DATASET PREPROCESSATI
 # ============================================================
 
-# Gli array .npy sono generati da preprocessing.py
+# Gli array .npy sono generati da 1_preprocessing.py
 data/processed/*.npy
 
 

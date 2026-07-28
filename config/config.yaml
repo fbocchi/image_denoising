@@ -5,11 +5,11 @@ data:
 
 noise:
   type: gaussian
-  standard_deviation: 0.3
+  standard_deviation: 0.2
 
 model:
   first_filters: 32
-  second_filters: 32
+  second_filters: 64
   kernel_size: 3
 
 training:

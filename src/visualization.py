@@ -18,7 +18,8 @@ def save_figure(figure, output_path):
     plt.close(figure)
 
 
-def plot_training_history(history_path, output_path):
+def plot_training_history_2(history_path, output_path):
+
     history = load_history(history_path)
 
     training_loss = history["loss"]
@@ -26,27 +27,136 @@ def plot_training_history(history_path, output_path):
 
     epochs = range(1, len(training_loss) + 1)
 
-    figure = plt.figure(figsize=(9, 5))
+    figure, ax = plt.subplots(figsize=(10, 4.8))
 
-    plt.plot(
+    ax.plot(
         epochs,
         training_loss,
+        linewidth=2.5,
         label="Training MSE",
     )
 
-    plt.plot(
+    ax.plot(
         epochs,
         validation_loss,
+        linewidth=2.5,
+        linestyle="--",
         label="Validation MSE",
     )
 
-    plt.xlabel("Epoca")
-    plt.ylabel("Mean Squared Error")
-    plt.title("Andamento della loss")
+    ax.set_xlabel("Epoch")
+    ax.set_ylabel("Mean Squared Error")
+    ax.set_title("Training History")
 
-    plt.legend()
-    plt.grid()
-    plt.tight_layout()
+    ax.set_xticks(epochs)
+    ax.set_xlim(1, len(training_loss))
+
+    minimum = min(
+        min(training_loss),
+        min(validation_loss),
+    )
+
+    maximum = max(
+        max(training_loss),
+        max(validation_loss),
+    )
+
+    # piccolo margine verticale
+    margin = 0.02 * (maximum - minimum)
+
+    ax.set_ylim(
+        minimum - margin,
+        maximum + margin,
+    )
+
+    ax.grid(
+        linestyle="--",
+        alpha=0.3,
+    )
+
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+
+    ax.legend(
+        frameon=False,
+        loc="upper right",
+    )
+
+    figure.tight_layout()
+
+    save_figure(
+        figure=figure,
+        output_path=output_path,
+    )
+
+
+def plot_training_history_1(history_path, output_path):
+
+    history = load_history(history_path)
+
+    training_loss = history["loss"]
+    validation_loss = history["val_loss"]
+
+    epochs = range(1, len(training_loss) + 1)
+
+    figure, ax = plt.subplots(figsize=(8.5, 5))
+
+    ax.plot(
+        epochs,
+        training_loss,
+        marker="o",
+        markersize=4,
+        linewidth=2,
+        label="Training MSE",
+    )
+
+    ax.plot(
+        epochs,
+        validation_loss,
+        marker="s",
+        markersize=4,
+        linewidth=2,
+        linestyle="--",
+        label="Validation MSE",
+    )
+
+    ax.set_xlabel("Epoch")
+    ax.set_ylabel("Mean Squared Error")
+    ax.set_title("Training History")
+
+    ax.set_xticks(range(1, len(training_loss) + 1))
+
+    minimum = min(
+        min(training_loss),
+        min(validation_loss),
+    )
+
+    maximum = max(
+        max(training_loss),
+        max(validation_loss),
+    )
+
+    margin = 0.05 * (maximum - minimum)
+
+    ax.set_ylim(
+        minimum - margin,
+        maximum + margin,
+    )
+
+    ax.grid(
+        linestyle="--",
+        alpha=0.3,
+    )
+
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+
+    ax.legend(
+        frameon=False,
+        loc="upper right",
+    )
+
+    figure.tight_layout()
 
     save_figure(
         figure=figure,
